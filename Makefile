@@ -1,5 +1,8 @@
-all:
-	@$(MAKE) -C src
+development:
+	@$(MAKE) -C src CFLAGS_D='-ggdb -D_DEBUG'
+
+production: 
+	@$(MAKE) -C src CFLAGS_D=-DNDEBUG
 
 .PHONY: clean
 

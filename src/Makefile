@@ -1,6 +1,6 @@
 IDIR = ../include
 CC=gcc
-CFLAGS= -I$(IDIR)
+CFLAGS= -I$(IDIR) $(CFLAGS_D)
 
 ODIR=../obj
 LDIR =../lib
@@ -15,7 +15,7 @@ OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 
 $(ODIR)/%.o: %.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -c -o $@ $< $(CFLAGS) 
 
 notevensql: $(OBJ)
 	gcc -o ../$@ $^ $(CFLAGS) $(LIBS)
