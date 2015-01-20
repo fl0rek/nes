@@ -32,7 +32,10 @@ uint64_t delete(avltree* t, void* data);
 node* first(avltree* t);
 node* next(avltree* t, node* n);
 node* prev(avltree* t, node* n);
+node* get_node(avltree* t, void* data);
 
+node* delete_node(avltree* t, node* n);
+node* get_node_by_node(avltree* t, node* n, void* data);
 void ff_insert(avltree* t, node* n, node* new);
 void ff_rebalance_rest(avltree* t, node* n);
 
@@ -43,7 +46,7 @@ void ll_rotate(node*, node**);
 
 node* first(avltree* t) {
 	node* n = t->root; 
-	while(n->l)
+	while(n && n->l)
 		n = n-> l;
 	return n;
 }
@@ -76,6 +79,135 @@ node* next(__attribute__((unused)) avltree* t, node* n) {
 				return 0;
 		}
 		n = n->p;
+	}
+	return n;
+}
+
+node* prev(__attribute__((unused)) avltree* t, node* n) {
+	if(n->l) {
+		n = n->l;
+		while(n->r)
+			n = n->r;
+	} else {
+		node * nn;
+		do {
+			nn = n;
+			n = n->p;
+		} while(n && n->r != nn);
+	}
+	return n;
+}
+
+uint64_t delete(avltree* t, void* data) {
+	node* n = get_node(t, data);
+	if(!n) {
+		return -1;
+	}
+	delete_node(t, n);
+	free(n);
+	t->size--;
+	return 0;
+}
+node* get_node(avltree* t, void* data) {
+	return get_node_by_node(t, t->root, data);
+}
+
+node* get_node_by_node(avltree* t, node* n, void* data) {
+	if(!n)
+		return n;
+	if(n->data == data) 
+		return n;
+	if(t->greater_comparator(data, n->data) > 0) {
+		return get_node_by_node(t, n->l, data);
+	} else {
+		return get_node_by_node(t, n->r, data);
+	}
+
+}
+
+node* delete_node(avltree* t, node* n) {
+	printf("delete '%x'%d'\n", t, get_data(n));
+	node* np = 0;
+	uint8_t nested;
+	if(n->l && n->r) {
+		np = delete_node(t, prev(t, n));
+		printf("-- %d\n", get_data(np)); /// REMOVEME
+		nested = 0;
+	} else {
+		if(n->l) {
+			np = n->l;
+			n->l = 0;
+		} else {
+			np = n->r;
+			n->r = 0;
+		}
+		n->bf = 0;
+		nested = 1;
+	}
+
+	if(np) {
+		np->r = n->r;
+		np->l = n->l;
+		if(np->l)
+			np->l->p = np;
+		np->p = n->p;
+		if(np->r)
+			np->r->p = np;
+		np->bf = n->bf;
+	}
+
+	if(n->p) {
+		if(n->p->l == n)
+			n->p->l = np;
+		else 
+			n->p->r = np;
+	} else {
+		t->root = np;
+	}
+
+	if(nested) {
+		node* ns;
+		node* nr = np;
+		np = n->p;
+		while(np) {
+			if(!np->bf) {
+				if(np->l == nr)
+					np->bf = -1;
+				else 
+					np->bf = 1;
+				break;
+			} else {
+				//if(!((np->bf != 1 || np->l != nr) && (np->bf != -1 || np->r != nr))) {
+				if(((np->bf == 1) && (np->l == nr)) || ((np->bf == -1) && (np->r == nr))) {
+					np->bf = 0;
+					nr = np;
+					np = np->p;
+				} else {
+					ns = np->l == nr ? np->r : np->l;
+					if(!ns->bf) {
+						if(np->bf == 1)
+							ll_rotate((np), &t->root);
+						else 
+							rr_rotate((np), &t->root);
+						break;
+					} else if(ns->bf == np->bf) {
+						if(np->bf == 1)
+							ll_rotate((np), &t->root);
+						else 
+							rr_rotate((np), &t->root);
+						nr = ns;
+						np = ns->p;
+					} else {
+						if(np->bf == 1)
+							lr_rotate((np), &t->root);
+						else
+							rl_rotate((np), &t->root);
+						nr = np->p;
+						np = nr->p;
+					}
+				}
+			}
+		}
 	}
 	return n;
 }
@@ -166,7 +298,9 @@ void ff_rebalance_rest(avltree* t, node* n) {
 }
 
 void ll_rotate(node* origin, node** root) {
+#ifdef _DEBUG_AVL
 	printf("ll [%d]\n", (origin)->data);
+#endif
 	node* n = origin;
 	node* ln = n->l;
 	node* lrn = ln->r;
@@ -193,7 +327,9 @@ void ll_rotate(node* origin, node** root) {
 }
 
 void rr_rotate(node* origin, node** root) {
+#ifdef _DEBUG_AVL
 	printf("rr [%d]\n", (origin)->data);
+#endif
 	node* n = origin;
 	node* rn = n->r;
 	node* rln = rn->l;
@@ -220,7 +356,9 @@ void rr_rotate(node* origin, node** root) {
 }
 
 void rl_rotate(node* origin, node** root) {
+#ifdef _DEBUG_AVL
 	printf("rl [%d]\n", (origin)->data);
+#endif
 	node* n = origin;
 	//node* ln = n->l;
 	node* rn = n->r;
@@ -261,7 +399,9 @@ void rl_rotate(node* origin, node** root) {
 }
 
 void lr_rotate(node* origin, node** root) {
+#ifdef _DEBUG_AVL
 	printf("lr [%d]\n", (origin)->data);
+#endif
 	node* n = origin;
 	node* ln = n->l;
 	//node* rn = n->r;
@@ -301,6 +441,21 @@ void lr_rotate(node* origin, node** root) {
 	lrn->bf = 0;
 }
 
-uint8_t canonical_pointer_comparator(void* lhs, void* rhs) {
-	return lhs > rhs;
+int8_t canonical_pointer_comparator(void* lhs, void* rhs) {
+	return lhs > rhs ? 1 : -1 ;
+}
+
+#ifdef _DEBUG_AVL
+main() {
+#else
+main_avl() {
+#endif
+	avltree* t = avl_init_tree(canonical_pointer_comparator);
+	insert(t, 10);
+	insert(t, 20);
+	insert(t, 30);
+	debug_print(t);
+	printf("status %d\n", delete(t, 20));
+	printf("removed\n");
+	debug_print(t);
 }

@@ -1,5 +1,5 @@
 development:
-	@$(MAKE) -C src CFLAGS_D='-ggdb -D_DEBUG'
+	@$(MAKE) -C src CFLAGS_D='-ggdb -rdynamic -D_DEBUG'
 
 production: 
 	@$(MAKE) -C src CFLAGS_D=-DNDEBUG

@@ -6,6 +6,7 @@
 #include <panel.h>
 #include <stdio.h>
 #include <menu.h>
+#include <form.h>
 
 #include <assert.h>
 
@@ -14,6 +15,7 @@
 
 
 char* header = 0;
+char* footer[200];
 uint8_t sort_by = 0;
 ITEM** generate_menu(avltree* t, int cols) {
 	if(!t)
@@ -24,9 +26,19 @@ ITEM** generate_menu(avltree* t, int cols) {
 	int linesize = cols;
 	int freesize = linesize -3 -16 -4;
 
+	endwin();
 
 	int i;
-	for(i = 0; n; i++) {
+	if(!n) {
+		char empty[] = "EMPTY";
+		char ord[] = "0";
+		char* line = calloc(linesize, sizeof(*line));
+
+		snprintf(line, linesize, "%*s%*s", 10+strlen(empty)/2, empty, 10-strlen(empty)/2, "");
+		item[0] = new_item(ord, line);
+		set_item_userptr(item[0], 0);
+	} else for(i = 0; n; i++) {
+
 		record* r = get_data(n);
 		const char* name = magic_get(r, r->o_name);
 		const char* surname = magic_get(r, r->o_surname);
@@ -45,13 +57,17 @@ debugme:
 		char* line = calloc(linesize, sizeof(*line));
 		char* ord = calloc(4, sizeof(*ord));
 		
-		snprintf(line, linesize, "%2$*1$s", 10, "abcdefghijklmno");
 		snprintf(line, linesize, "%2$*1$s %3$*1$s %4$*1$s %5$*1$s %6$"PRIu8".%7$"PRIu8".%8$"PRIu8".%9$"PRIu8, -freesize/4,
 				computername, workspace, name, surname, 
 				ip[0], ip[1], ip[2], ip[3]);
 				
 		snprintf(ord, 4, "%3d", i);
 		item[i] = new_item(ord, line);
+
+		set_item_userptr(item[i], r);
+
+		printf("%x --- %x\n", n, item_userptr(item[i]));
+
 		n = next(t, n);
 	}
 
@@ -64,8 +80,10 @@ debugme:
 char* topmenu[] = {
 	"Save",
 	"Load",
-	"Edit enum type",
+	"Add",
 	"Quit",
+	"Refresh",
+	"Edit enum type",
 	0
 };
 
@@ -74,6 +92,8 @@ char* topmenu_keys[] = {
 	"F2",
 	"F3",
 	"F4",
+	"F5",
+	"F6",
 	0
 };
 
@@ -84,13 +104,56 @@ int8_t record_compare_workspace(void* lhs, void* rhs);
 
 avltree** sorts;
 char* sorts_name[] = {
+	"workspace",
 	"computername",
-	"workspace"
-	"name",
 	"surname",
+	"name",
 };
 
 uint8_t sort_num = 0;
+
+char* types[] = {
+	"Laptop",
+	"PC",
+	"Handheld",
+	"TV",
+	"Console",
+	0
+};
+
+
+void save(const char* filename) {
+	o_marshall* out = m_init(filename);
+
+	node* n = first(sorts[0]);
+	do {
+		record* r = get_data(n);
+		m_insert(out, r, get_size(r));
+	} while((n = next(sorts[0], n)));
+	m_save(out);
+	m_save(out);
+}
+
+void load(const char* filename) {
+	i_marshall* in = m_load(filename);
+	if(!in)
+		error("Failed to load file");
+	void* data = m_get_data(in);
+	size_t end = m_get_size(in);
+	size_t cur = 0;
+
+	while(end > cur) {
+		record* r = data;
+		size_t cur_size = get_size(r);
+		cur += cur_size;
+		data += cur_size;
+
+		record *nr = malloc(cur_size);
+		memcpy(nr, r, cur_size);
+		insert_all(nr);
+	}
+	m_load_close(in);
+}
 
 
 void free_items(ITEM** i) {
@@ -100,12 +163,12 @@ void free_items(ITEM** i) {
 }
 
 ITEM** next_sort(int linesize) {
-	sort_num = (sort_num+1) % 4;
+	sort_num = sorts[sort_num+1] ? sort_num+1 : sort_num;
 	return generate_menu(sorts[sort_num], linesize);
 }
 
 ITEM** prev_sort(int linesize) {
-	sort_num = sort_num ? sort_num -1 : 3;
+	sort_num = sort_num ? sort_num -1 : 0;
 	return generate_menu(sorts[sort_num], linesize);
 }
 
@@ -116,6 +179,84 @@ void insert_all(record* r) {
 	}
 }
 
+void delete_all(record* r) {
+	if(!r)
+		return;
+	int i = 0;
+	endwin();
+	for(i = 0; sorts[i]; i++) {
+		debug_print(sorts[i]);
+		if(delete(sorts[i], r));
+		debug_print(sorts[i]);
+	}
+	free(r);
+	printf("[%x]\n", r);
+}
+
+void show_edit(record* r) {
+	if(r) {
+
+	}
+	FIELD *field[9];
+	int i;
+	field[0] = new_field(1, 10, 1, 20, 0, 0);
+	field[1] = new_field(1, 10, 3, 20, 0, 0);
+	field[2] = new_field(1, 10, 5, 20, 0, 0);
+	field[3] = new_field(1, 10, 7, 20, 0, 0);
+	field[4] = new_field(1, 10, 9, 20, 0, 0);
+	field[5] = new_field(1, 3, 11, 20, 0, 0);
+	field[6] = new_field(1, 3, 13, 20, 0, 0);
+	field[7] = new_field(1, 3, 15, 20, 0, 0);
+	field[8] = new_field(1, 3, 17, 20, 0, 0);
+	field[9] = 0;
+	for(i = 0; i < 10; i++) 
+		set_field_back(field[i], A_UNDERLINE);
+	FORM* edit_form = new_form(field);
+	int rows, cols;
+	scale_form(edit_form, &rows, &cols);
+	WINDOW* dialog_edit = newwin(rows + 4, cols + 4, 4, 4);
+	keypad(dialog_edit, TRUE);
+	set_form_win(edit_form, dialog_edit);
+	set_form_sub(edit_form, derwin(dialog_edit, rows, cols, 2, 2));
+	box(dialog_edit, 0, 0);
+	//mvwprintw(dialogedit, 1, 1, "Filename:");
+	post_form(edit_form);
+	wrefresh(dialog_edit);
+	int c;
+	while((c = wgetch(dialog_edit)) != 10 && c != 27) {
+		form_driver(edit_form, c);
+		wrefresh(dialog_edit);
+	}
+	if(c != 27) {
+		form_driver(edit_form, REQ_VALIDATION);
+		/*
+		char* filename = field_buffer(field[0], 0);
+		char* sp = strchr(filename, ' ');
+		*sp = 0;
+		*/
+	}
+	unpost_form(edit_form);
+	free_form(edit_form);
+	for( i = 0; i < 10; i++ )
+		free_field(field[i]);
+}
+
+void menu_update(MENU* men, int linesize, int sort) {
+	ITEM** i = menu_items(men);
+	unpost_menu(men);
+	ITEM** new;
+	if(sort == -1) 
+		new = prev_sort(linesize);
+	else if(sort == 1)
+		new = next_sort(linesize);
+	else 
+		new = generate_menu(sorts[sort_num], linesize);
+	set_menu_items(men, new);
+	post_menu(men);
+	free_items(i);
+	refresh();
+}
+
 main(int argc, char** argv) {
 	//int lines = 10, cols = 40, y = 2, x = 4, i;
 	int maxlines;
@@ -124,6 +265,7 @@ main(int argc, char** argv) {
 	initscr();
 	cbreak();
 	noecho();
+	start_color();
 
 	keypad(stdscr, TRUE);
 
@@ -142,7 +284,7 @@ main(int argc, char** argv) {
 	set_menu_format(men_top, 1, 5);
 	post_menu(men_top);
 
-	sorts = calloc(4, sizeof(*sorts));
+	sorts = calloc(9, sizeof(*sorts));
 	sorts[0] = avl_init_tree(record_compare_computername);
 	sorts[1] = avl_init_tree(record_compare_workspace);
 	sorts[2] = avl_init_tree(record_compare_name);
@@ -156,11 +298,12 @@ main(int argc, char** argv) {
 	uint8_t ip[] = {10, 10, 10, 10};
 
 	//avltree* s_name = avl_init_tree(record_compare_name);
-	record* r = create_record(ip, "cn one", "n ooo", "sn abc", 1, "w ddd");
+	record* 
+	r = create_record(ip, "cn a", "n b", "sn b", 1, "w c");
 	insert_all(r);
-	r = create_record(ip, "cn two", "n a", "sn dda", 2, "w ooo");
+	r = create_record(ip, "cn b", "n a", "sn c", 2, "w b");
 	insert_all(r);
-	r = create_record(ip, "cn thr", "n 2", "sn oo", 3, "w iii");
+	r = create_record(ip, "cn c", "n c", "sn a", 3, "w a");
 	insert_all(r);
 
 	MENU* men_list = new_menu(generate_menu(sorts[0], maxcols-2));
@@ -173,19 +316,29 @@ main(int argc, char** argv) {
 	post_menu(men_list);
 	wrefresh(win_list);
 
+	init_pair(1, COLOR_GREEN, COLOR_BLACK);
 
 	/* Update the stacking order. 2nd panel will be on top */
 	update_panels();
+
+	mvprintw(3, 8, "%s", header);
 
 	/* Show it on the screen */
 	doupdate();
 
 	int c;
 	ITEM** i;
+	ITEM* cur;
+	record* m_r;
 	while((c = wgetch(stdscr)) != KEY_F(4) && c != 'q') {       
-		mvprintw(3, 2, "%s", header);
+		mvwprintw(win_list, 2, 8, "%s", header);
+		uint8_t sss;
 
 		switch(c) {
+			case KEY_F(5):
+			case 'r':
+				menu_update(men_list, maxcols-2, 0);
+				break;
 			case KEY_DOWN:
 			case 'j':
 				menu_driver(men_list, REQ_DOWN_ITEM);
@@ -195,6 +348,10 @@ main(int argc, char** argv) {
 				menu_driver(men_list, REQ_UP_ITEM);
 				break;
 			case KEY_LEFT:
+			case 'h':
+				menu_update(men_list, maxcols-2, -1);
+				break;
+
 				i = menu_items(men_list);
 				unpost_menu(men_list);
 				set_menu_items(men_list, prev_sort(maxcols-2));
@@ -203,6 +360,10 @@ main(int argc, char** argv) {
 				refresh();
 				break;
 			case KEY_RIGHT:
+			case 'l':
+				menu_update(men_list, maxcols-2, 1);
+				break;
+
 				i = menu_items(men_list);
 				unpost_menu(men_list);
 				set_menu_items(men_list, next_sort(maxcols-2));
@@ -216,15 +377,84 @@ main(int argc, char** argv) {
 			case KEY_PPAGE:
 				menu_driver(men_list, REQ_SCR_UPAGE);
 				break;
-
+			case 10 :
+				cur = current_item(men_list);
+				m_r = item_userptr(cur);
+				mvprintw(maxlines - 3, 0, "myptr %x", r);
+				show_edit(r);
+				break;
+			case KEY_F(3):
+				show_edit(0);
+				break;
+			case KEY_DC :
+			case 'd':
+				cur = current_item(men_list);
+				m_r = item_userptr(cur);
+				delete_all(m_r);
+				menu_update(men_list, maxcols-2, 0);
+				pos_menu_cursor(men_list);
+				break;
+			case KEY_F(1):
+			case 's':
+				sss = 1;
+			case KEY_F(2): 
+			case 'S':
+				;
+				FIELD *field[2];
+				field[0] = new_field(1, 10, 1, 1, 0, 0);
+				field[1] = 0;
+				set_field_back(field[0], A_UNDERLINE);
+				FORM* save_name = new_form(field);
+				int rows, cols;
+				scale_form(save_name, &rows, &cols);
+				WINDOW* dialog_save = newwin(rows + 4, cols + 4, 4, 4);
+				keypad(dialog_save, TRUE);
+				set_form_win(save_name, dialog_save);
+				set_form_sub(save_name, derwin(dialog_save, rows, cols, 2, 2));
+				set_field_pad(field[0], 0);
+				box(dialog_save, 0, 0);
+				mvwprintw(dialog_save, 1, 1, "Filename:");
+				post_form(save_name);
+				wrefresh(dialog_save);
+				refresh();
+				while((c = wgetch(dialog_save)) != 10 && c != 27) {
+					form_driver(save_name, c);
+					wrefresh(dialog_save);
+				}
+				if(c != 27) {
+					form_driver(save_name, REQ_VALIDATION);
+					char* filename = field_buffer(field[0], 0);
+					char* sp = strchr(filename, ' ');
+					*sp = 0;
+					if(sss)
+						save(filename);
+					else 
+						load(filename);
+				}
+				unpost_form(save_name);
+				free_form(save_name);
+				free_field(field[0]);
+				redrawwin(win_list);
+				break;
 		};
 		mvprintw(maxlines - 2, 0, "got some shit %3d [%3d] %2d %15s", c, KEY_F(1), sort_num, sorts_name[sort_num]);
+		mvprintw(maxlines - 1, 0, "%s", footer);
 		wrefresh(win_list);
 	}	
 
 	unpost_menu(men_list);
 	free_menu(men_list);
 	endwin();	
+
+	node* nnn;
+	for(it = 0; sorts[it]; it++) {
+		nnn = first(sorts[it]);
+		if(nnn)
+			do {
+				printf("%x\n", get_data(nnn));
+			} while(nnn = next(sorts[it], nnn));
+		printf("== %x\n", sorts[it]);
+	}
 
 }
 

@@ -5,7 +5,7 @@ CFLAGS= -I$(IDIR) $(CFLAGS_D)
 ODIR=../obj
 LDIR =../lib
 
-LIBS=-lpanel -lmenu
+LIBS=-lpanel -lmenu -lform
 
 _DEPS = avl.h marshall.h backend.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
