@@ -194,51 +194,108 @@ void delete_all(record* r) {
 }
 
 void show_edit(record* r) {
-	if(r) {
-
-	}
 	FIELD *field[9];
 	int i;
-	field[0] = new_field(1, 10, 1, 20, 0, 0);
-	field[1] = new_field(1, 10, 3, 20, 0, 0);
-	field[2] = new_field(1, 10, 5, 20, 0, 0);
-	field[3] = new_field(1, 10, 7, 20, 0, 0);
-	field[4] = new_field(1, 10, 9, 20, 0, 0);
-	field[5] = new_field(1, 3, 11, 20, 0, 0);
-	field[6] = new_field(1, 3, 13, 20, 0, 0);
-	field[7] = new_field(1, 3, 15, 20, 0, 0);
-	field[8] = new_field(1, 3, 17, 20, 0, 0);
-	field[9] = 0;
-	for(i = 0; i < 10; i++) 
+	field[0] = new_field(1, 10, 1, 1, 0, 0);
+	field[1] = new_field(1, 10, 3, 1, 0, 0);
+	field[2] = new_field(1, 10, 5, 1, 0, 0);
+	field[3] = new_field(1, 10, 7, 1, 0, 0);
+	field[4] = new_field(1, 3, 11, 1, 0, 0);
+	field[5] = new_field(1, 3, 11, 5, 0, 0);
+	field[6] = new_field(1, 3, 11, 9, 0, 0);
+	field[7] = new_field(1, 3, 11, 13, 0, 0);
+	field[8] = 0;
+	for(i = 0; i < 9; i++) 
 		set_field_back(field[i], A_UNDERLINE);
+
+	set_field_type(field[0], TYPE_ALNUM);
+	set_field_type(field[1], TYPE_ALNUM);
+	set_field_type(field[2], TYPE_ALNUM);
+	set_field_type(field[3], TYPE_ALNUM);
+
+	set_field_type(field[4], TYPE_NUMERIC);
+	set_field_type(field[5], TYPE_NUMERIC);
+	set_field_type(field[6], TYPE_NUMERIC);
+	set_field_type(field[7], TYPE_NUMERIC);
+
 	FORM* edit_form = new_form(field);
 	int rows, cols;
 	scale_form(edit_form, &rows, &cols);
-	WINDOW* dialog_edit = newwin(rows + 4, cols + 4, 4, 4);
+	WINDOW* dialog_edit = newwin(rows + 4, cols + 24, 4, 4);
 	keypad(dialog_edit, TRUE);
 	set_form_win(edit_form, dialog_edit);
-	set_form_sub(edit_form, derwin(dialog_edit, rows, cols, 2, 2));
+	set_form_sub(edit_form, derwin(dialog_edit, rows, cols, 2, 22));
 	box(dialog_edit, 0, 0);
-	//mvwprintw(dialogedit, 1, 1, "Filename:");
+	mvwprintw(dialog_edit, 3, 1, "Name:");
+	mvwprintw(dialog_edit, 5, 1, "Surname:");
+	mvwprintw(dialog_edit, 7, 1, "Workgroup:");
+	mvwprintw(dialog_edit, 9, 1, "Computername:");
+	mvwprintw(dialog_edit, 13, 1, "IP:");
+
+	if(r) {
+		set_field_buffer(field[0], 0, magic_get(r, r->o_name));
+		set_field_buffer(field[1], 0, magic_get(r, r->o_surname));
+		set_field_buffer(field[2], 0, magic_get(r, r->o_workspace));
+		set_field_buffer(field[3], 0, magic_get(r, r->o_computername));
+		char ipc[4];
+		uint8_t ip[4];
+
+		snprintf(ipc, 4, "%"PRIu8, ip[0]);
+		set_field_buffer(field[4], 0, ipc);
+		snprintf(ipc, 4, "%"PRIu8, ip[1]);
+		set_field_buffer(field[5], 0, ipc);
+		snprintf(ipc, 4, "%"PRIu8, ip[2]);
+		set_field_buffer(field[6], 0, ipc);
+		snprintf(ipc, 4, "%"PRIu8, ip[3]);
+		set_field_buffer(field[7], 0, ipc);
+	}
+	
 	post_form(edit_form);
 	wrefresh(dialog_edit);
 	int c;
 	while((c = wgetch(dialog_edit)) != 10 && c != 27) {
-		form_driver(edit_form, c);
+		switch(c) {
+			case KEY_DOWN:
+			case '\t':
+				form_driver(edit_form, REQ_NEXT_FIELD);
+				form_driver(edit_form, REQ_END_LINE);
+				break;
+			case KEY_UP:
+				form_driver(edit_form, REQ_PREV_FIELD);
+				form_driver(edit_form, REQ_END_LINE);
+				break;
+			default:
+				form_driver(edit_form, c);
+		}
+		mvwprintw(dialog_edit, 1, 2, "c: %d [KD %d]", c, KEY_DOWN);
 		wrefresh(dialog_edit);
 	}
 	if(c != 27) {
 		form_driver(edit_form, REQ_VALIDATION);
-		/*
-		char* filename = field_buffer(field[0], 0);
-		char* sp = strchr(filename, ' ');
-		*sp = 0;
-		*/
+		char* name = field_buffer(field[0], 0);
+		char* surname = field_buffer(field[1], 0);
+		char* workgroup = field_buffer(field[2], 0);
+		char* computername = field_buffer(field[3], 0);
+
+		uint8_t ip[4];
+		sscanf(field_buffer(field[4], 0), "%"PRIu8, &ip[0]);
+		sscanf(field_buffer(field[5], 0), "%"PRIu8, &ip[1]);
+		sscanf(field_buffer(field[6], 0), "%"PRIu8, &ip[2]);
+		sscanf(field_buffer(field[7], 0), "%"PRIu8, &ip[3]);
+		record *nr = create_record(ip, computername, name, surname, 0, workgroup);
+		delete_all(r);
+		insert_all(nr);
 	}
 	unpost_form(edit_form);
 	free_form(edit_form);
-	for( i = 0; i < 10; i++ )
+	for( i = 0; i < 9; i++ )
 		free_field(field[i]);
+}
+
+void remove_trailing_spaces(char* s) {
+	char* e = s + strlen(s);
+	while(*e == 20)
+		*e-- = 0;
 }
 
 void menu_update(MENU* men, int linesize, int sort) {
@@ -292,19 +349,8 @@ main(int argc, char** argv) {
 
 	box(win_list, 0, 0);
 
-	/* Attach a panel to each window */ 	/* Order is bottom up */
 	PANEL* pan_list = new_panel(win_list);
 
-	uint8_t ip[] = {10, 10, 10, 10};
-
-	//avltree* s_name = avl_init_tree(record_compare_name);
-	record* 
-	r = create_record(ip, "cn a", "n b", "sn b", 1, "w c");
-	insert_all(r);
-	r = create_record(ip, "cn b", "n a", "sn c", 2, "w b");
-	insert_all(r);
-	r = create_record(ip, "cn c", "n c", "sn a", 3, "w a");
-	insert_all(r);
 
 	MENU* men_list = new_menu(generate_menu(sorts[0], maxcols-2));
 
@@ -357,7 +403,6 @@ main(int argc, char** argv) {
 				set_menu_items(men_list, prev_sort(maxcols-2));
 				post_menu(men_list);
 				free_items(i);
-				refresh();
 				break;
 			case KEY_RIGHT:
 			case 'l':
@@ -369,7 +414,6 @@ main(int argc, char** argv) {
 				set_menu_items(men_list, next_sort(maxcols-2));
 				post_menu(men_list);
 				free_items(i);
-				refresh();
 				break;
 			case KEY_NPAGE:
 				menu_driver(men_list, REQ_SCR_DPAGE);
@@ -380,11 +424,14 @@ main(int argc, char** argv) {
 			case 10 :
 				cur = current_item(men_list);
 				m_r = item_userptr(cur);
-				mvprintw(maxlines - 3, 0, "myptr %x", r);
-				show_edit(r);
+				show_edit(m_r);
+				menu_update(men_list, maxcols-2, 0);
+				redrawwin(win_list);
 				break;
 			case KEY_F(3):
 				show_edit(0);
+				menu_update(men_list, maxcols-2, 0);
+				redrawwin(win_list);
 				break;
 			case KEY_DC :
 			case 'd':
@@ -411,6 +458,7 @@ main(int argc, char** argv) {
 				keypad(dialog_save, TRUE);
 				set_form_win(save_name, dialog_save);
 				set_form_sub(save_name, derwin(dialog_save, rows, cols, 2, 2));
+				set_field_type(field[0], TYPE_ALNUM);
 				set_field_pad(field[0], 0);
 				box(dialog_save, 0, 0);
 				mvwprintw(dialog_save, 1, 1, "Filename:");
