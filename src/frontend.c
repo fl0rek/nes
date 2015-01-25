@@ -1,9 +1,9 @@
 #include "marshall.h"
 #include "backend.h"
+#include "frontend.h"
 #include "avl.h"
 
 #include <stdint.h>
-#include <panel.h>
 #include <stdio.h>
 #include <menu.h>
 #include <form.h>
@@ -12,8 +12,6 @@
 #include <assert.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-
-
 
 char* header = 0;
 char* footer[200];
@@ -98,14 +96,6 @@ char* topmenu_keys[] = {
 	0
 };
 
-int8_t record_compare_name(void* lhs, void* rhs);
-int8_t record_compare_computername(void* lhs, void* rhs);
-int8_t record_compare_surname(void* lhs, void* rhs);
-int8_t record_compare_workspace(void* lhs, void* rhs);
-
-
-void insert_all(record* r);
-
 avltree** sorts;
 char* sorts_name[] = {
 	"workspace",
@@ -124,7 +114,6 @@ char* types[] = {
 	"Console",
 	0
 };
-
 
 void save(const char* filename) {
 	o_marshall* out = m_init(filename);
@@ -176,6 +165,7 @@ ITEM** prev_sort(int linesize) {
 	return generate_menu(sorts[sort_num], linesize);
 }
 
+
 void insert_all(record* r) {
 	uint8_t i;
 	for(i = 0; i < 4; i++) {
@@ -209,8 +199,10 @@ void show_edit(record* r) {
 	field[6] = new_field(1, 3, 11, 9, 0, 0);
 	field[7] = new_field(1, 3, 11, 13, 0, 0);
 	field[8] = 0;
-	for(i = 0; i < 9; i++) 
+	for (i = 0; i < 9; i++) {
 		set_field_back(field[i], A_UNDERLINE);
+		field_opts_off(field[i], O_NULLOK);
+	}
 
 	char regexp[] = "/[a-zA-z0-9]+/";
 	set_field_type(field[0], TYPE_REGEXP, regexp);
@@ -265,10 +257,21 @@ void show_edit(record* r) {
 				form_driver(edit_form, REQ_NEXT_FIELD);
 				form_driver(edit_form, REQ_END_LINE);
 				break;
+
 			case KEY_UP:
 				form_driver(edit_form, REQ_PREV_FIELD);
 				form_driver(edit_form, REQ_END_LINE);
 				break;
+
+			case KEY_BACKSPACE:
+			case 127:
+				form_driver(form, REQ_DEL_PREV);
+				break;
+
+			case KEY_DC:
+				form_driver(form, REQ_DEL_CHAR);
+				break;
+
 			default:
 				form_driver(edit_form, c);
 		}
@@ -354,8 +357,6 @@ main(int argc, char** argv) {
 
 	box(win_list, 0, 0);
 
-	PANEL* pan_list = new_panel(win_list);
-
 
 	MENU* men_list = new_menu(generate_menu(sorts[0], maxcols-2));
 
@@ -369,8 +370,6 @@ main(int argc, char** argv) {
 
 	init_pair(1, COLOR_GREEN, COLOR_BLACK);
 
-	/* Update the stacking order. 2nd panel will be on top */
-	update_panels();
 
 	mvprintw(3, 8, "%s", header);
 
