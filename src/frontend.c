@@ -265,11 +265,11 @@ void show_edit(record* r) {
 
 			case KEY_BACKSPACE:
 			case 127:
-				form_driver(form, REQ_DEL_PREV);
+				form_driver(edit_form, REQ_DEL_PREV);
 				break;
 
 			case KEY_DC:
-				form_driver(form, REQ_DEL_CHAR);
+				form_driver(edit_form, REQ_DEL_CHAR);
 				break;
 
 			default:
