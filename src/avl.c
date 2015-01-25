@@ -447,9 +447,6 @@ int8_t canonical_pointer_comparator(void* lhs, void* rhs) {
 
 #ifdef _DEBUG_AVL
 main() {
-#else
-main_avl() {
-#endif
 	avltree* t = avl_init_tree(canonical_pointer_comparator);
 	insert(t, 10);
 	insert(t, 20);
@@ -459,3 +456,4 @@ main_avl() {
 	printf("removed\n");
 	debug_print(t);
 }
+#endif

@@ -129,8 +129,6 @@ void save(const char* filename) {
 
 void load(const char* filename) {
 	i_marshall* in = m_load(filename);
-	if(!in)
-		error("Failed to load file");
 	void* data = m_get_data(in);
 	size_t end = m_get_size(in);
 	size_t cur = 0;
@@ -194,26 +192,40 @@ void show_edit(record* r) {
 	field[1] = new_field(1, 10, 3, 1, 0, 0);
 	field[2] = new_field(1, 10, 5, 1, 0, 0);
 	field[3] = new_field(1, 10, 7, 1, 0, 0);
-	field[4] = new_field(1, 3, 11, 1, 0, 0);
+	field[4] = new_field(1, 10, 11, 1, 0, 0);
+	field[5] = new_field(1, 5, 13, 1, 0, 0);
+	/*
 	field[5] = new_field(1, 3, 11, 5, 0, 0);
 	field[6] = new_field(1, 3, 11, 9, 0, 0);
 	field[7] = new_field(1, 3, 11, 13, 0, 0);
-	field[8] = 0;
-	for (i = 0; i < 9; i++) {
+	*/
+	field[6] = 0;
+	FIELD* save = field[5];
+
+	for (i = 0; i < 5; i++) {
 		set_field_back(field[i], A_UNDERLINE);
 		field_opts_off(field[i], O_NULLOK);
+		field_opts_off(field[i], O_PASSOK);
 	}
+	field_opts_off(field[5], O_EDIT);
 
-	char regexp[] = "/[a-zA-z0-9]+/";
+	/*
 	set_field_type(field[0], TYPE_REGEXP, regexp);
 	set_field_type(field[1], TYPE_REGEXP, regexp);
 	set_field_type(field[2], TYPE_REGEXP, regexp);
 	set_field_type(field[3], TYPE_REGEXP, regexp);
+	*/
+	set_field_type(field[0], TYPE_ALNUM, 1);
+	set_field_type(field[1], TYPE_ALNUM, 1);
+	set_field_type(field[2], TYPE_ALNUM, 1);
+	set_field_type(field[3], TYPE_ALNUM, 1);
 
-	set_field_type(field[4], TYPE_NUMERIC);
+	set_field_type(field[4], TYPE_IPV4);
+	/*
 	set_field_type(field[5], TYPE_NUMERIC);
 	set_field_type(field[6], TYPE_NUMERIC);
 	set_field_type(field[7], TYPE_NUMERIC);
+	*/
 
 	FORM* edit_form = new_form(field);
 	int rows, cols;
@@ -234,32 +246,34 @@ void show_edit(record* r) {
 		set_field_buffer(field[1], 0, magic_get(r, r->o_surname));
 		set_field_buffer(field[2], 0, magic_get(r, r->o_workspace));
 		set_field_buffer(field[3], 0, magic_get(r, r->o_computername));
-		char ipc[4];
-		uint8_t ip[4];
+		char ipc[20];
+		uint8_t *ip = get_ip(r);
 
-		snprintf(ipc, 4, "%"PRIu8, ip[0]);
+
+		snprintf(ipc, 20, "%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8, ip[0], ip[1], ip[2], ip[3]);
 		set_field_buffer(field[4], 0, ipc);
+		/*
 		snprintf(ipc, 4, "%"PRIu8, ip[1]);
 		set_field_buffer(field[5], 0, ipc);
 		snprintf(ipc, 4, "%"PRIu8, ip[2]);
 		set_field_buffer(field[6], 0, ipc);
 		snprintf(ipc, 4, "%"PRIu8, ip[3]);
 		set_field_buffer(field[7], 0, ipc);
+		*/
 	}
+	set_field_buffer(save, 0, "Save");
 	
 	post_form(edit_form);
 	wrefresh(dialog_edit);
 	int c;
-	while((c = wgetch(dialog_edit)) != 10 && c != 27) {
+	int ret = 0;
+	while((c = wgetch(dialog_edit)) != 27) {
+	//	if(c == 10 && form_driver(edit_form, REQ_VALIDATION) == E_OK)
+			//break;
 		switch(c) {
-			case KEY_DOWN:
-			case '\t':
-				form_driver(edit_form, REQ_NEXT_FIELD);
-				form_driver(edit_form, REQ_END_LINE);
-				break;
 
 			case KEY_UP:
-				form_driver(edit_form, REQ_PREV_FIELD);
+				ret= form_driver(edit_form, REQ_PREV_FIELD);
 				form_driver(edit_form, REQ_END_LINE);
 				break;
 
@@ -272,31 +286,46 @@ void show_edit(record* r) {
 				form_driver(edit_form, REQ_DEL_CHAR);
 				break;
 
+			case 10:
+				if(current_field(edit_form) == save)
+					if(form_driver(edit_form, REQ_VALIDATION) == E_OK) { 
+						goto save;
+					} else break;
+			case KEY_DOWN:
+			case '\t':
+				ret= form_driver(edit_form, REQ_NEXT_FIELD);
+				form_driver(edit_form, REQ_END_LINE);
+				break;
+
 			default:
-				form_driver(edit_form, c);
+				ret= form_driver(edit_form, c);
 		}
-		mvwprintw(dialog_edit, 1, 2, "c: %d [KD %d]", c, KEY_DOWN);
+		//mvwprintw(dialog_edit, 1, 2, "c: %d [KD %d] R: %d", c, KEY_DOWN, ret);
 		wrefresh(dialog_edit);
 	}
+save:
 	if(c != 27) {
-		form_driver(edit_form, REQ_VALIDATION);
+		//form_driver(edit_form, REQ_VALIDATION);
 		char* name = field_buffer(field[0], 0);
 		char* surname = field_buffer(field[1], 0);
 		char* workgroup = field_buffer(field[2], 0);
 		char* computername = field_buffer(field[3], 0);
 
 		uint8_t ip[4];
+		sscanf(field_buffer(field[4], 0),"%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8, &ip[0], &ip[1], &ip[2], &ip[3]);
+		/*
 		sscanf(field_buffer(field[4], 0), "%"PRIu8, &ip[0]);
 		sscanf(field_buffer(field[5], 0), "%"PRIu8, &ip[1]);
 		sscanf(field_buffer(field[6], 0), "%"PRIu8, &ip[2]);
 		sscanf(field_buffer(field[7], 0), "%"PRIu8, &ip[3]);
+		*/
 		record *nr = create_record(ip, computername, name, surname, 0, workgroup);
 		delete_all(r);
 		insert_all(nr);
 	}
 	unpost_form(edit_form);
 	free_form(edit_form);
-	for( i = 0; i < 9; i++ )
+	for( i = 0; i < 5; i++ )
 		free_field(field[i]);
 }
 
@@ -368,7 +397,8 @@ main(int argc, char** argv) {
 	post_menu(men_list);
 	wrefresh(win_list);
 
-	init_pair(1, COLOR_GREEN, COLOR_BLACK);
+	init_pair(1, COLOR_WHITE, COLOR_BLACK);
+	init_pair(2, COLOR_BLACK, COLOR_WHITE);
 
 
 	mvprintw(3, 8, "%s", header);
