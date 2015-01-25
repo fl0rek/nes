@@ -8,6 +8,7 @@
 #include <menu.h>
 #include <form.h>
 
+#include <string.h>
 #include <assert.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -101,6 +102,9 @@ int8_t record_compare_name(void* lhs, void* rhs);
 int8_t record_compare_computername(void* lhs, void* rhs);
 int8_t record_compare_surname(void* lhs, void* rhs);
 int8_t record_compare_workspace(void* lhs, void* rhs);
+
+
+void insert_all(record* r);
 
 avltree** sorts;
 char* sorts_name[] = {
@@ -208,10 +212,11 @@ void show_edit(record* r) {
 	for(i = 0; i < 9; i++) 
 		set_field_back(field[i], A_UNDERLINE);
 
-	set_field_type(field[0], TYPE_ALNUM);
-	set_field_type(field[1], TYPE_ALNUM);
-	set_field_type(field[2], TYPE_ALNUM);
-	set_field_type(field[3], TYPE_ALNUM);
+	char regexp[] = "/[a-zA-z0-9]+/";
+	set_field_type(field[0], TYPE_REGEXP, regexp);
+	set_field_type(field[1], TYPE_REGEXP, regexp);
+	set_field_type(field[2], TYPE_REGEXP, regexp);
+	set_field_type(field[3], TYPE_REGEXP, regexp);
 
 	set_field_type(field[4], TYPE_NUMERIC);
 	set_field_type(field[5], TYPE_NUMERIC);
