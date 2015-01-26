@@ -65,8 +65,6 @@ debugme:
 
 		set_item_userptr(item[i], r);
 
-		printf("%x --- %x\n", n, item_userptr(item[i]));
-
 		n = next(t, n);
 	}
 
@@ -116,20 +114,24 @@ char* types[] = {
 };
 
 void save(const char* filename) {
-	o_marshall* out = m_init(filename);
-
 	node* n = first(sorts[0]);
-	do {
-		record* r = get_data(n);
-		m_insert(out, r, get_size(r));
-	} while((n = next(sorts[0], n)));
-	m_save(out);
-	m_save(out);
+	if(n) {
+		o_marshall* out = m_init(filename);
+		do {
+			record* r = get_data(n);
+			m_insert(out, r, get_size(r));
+		} while((n = next(sorts[0], n)));
+		m_save(out);
+	}
 }
 
 void load(const char* filename) {
 	i_marshall* in = m_load(filename);
+	if(!in)
+		return ;
 	void* data = m_get_data(in);
+	if(!data)
+		return ;
 	size_t end = m_get_size(in);
 	size_t cur = 0;
 
@@ -182,7 +184,6 @@ void delete_all(record* r) {
 		debug_print(sorts[i]);
 	}
 	free(r);
-	printf("[%x]\n", r);
 }
 
 void show_edit(record* r) {
@@ -519,8 +520,10 @@ main(int argc, char** argv) {
 				redrawwin(win_list);
 				break;
 		};
-		mvprintw(maxlines - 2, 0, "got some shit %3d [%3d] %2d %15s", c, KEY_F(1), sort_num, sorts_name[sort_num]);
+		/*
+		mvprintw(maxlines - 2, 0, "got some %3d [%3d] %2d %15s", c, KEY_F(1), sort_num, sorts_name[sort_num]);
 		mvprintw(maxlines - 1, 0, "%s", footer);
+		*/
 		wrefresh(win_list);
 	}	
 
@@ -531,40 +534,44 @@ main(int argc, char** argv) {
 	node* nnn;
 	for(it = 0; sorts[it]; it++) {
 		nnn = first(sorts[it]);
+		/*
 		if(nnn)
 			do {
 				printf("%x\n", get_data(nnn));
 			} while(nnn = next(sorts[it], nnn));
 		printf("== %x\n", sorts[it]);
+		*/
 	}
 
 }
+
 
 int8_t record_compare_name(void* lhs, void* rhs) {
 	record* lhr = (record*) lhs;
 	record* rhr = (record*) rhs;
 	const char* lhname = magic_get(lhs, lhr->o_name);
 	const char* rhname = magic_get(rhs, rhr->o_name);
-	return strcmp(lhname, rhname); 
+
+	return -strcmp(lhname, rhname); 
 }
 int8_t record_compare_surname(void* lhs, void* rhs) {
 	record* lhr = (record*) lhs;
 	record* rhr = (record*) rhs;
 	const char* lhsurname = magic_get(lhs, lhr->o_surname);
 	const char* rhsurname = magic_get(rhs, rhr->o_surname);
-	return strcmp(lhsurname, rhsurname); 
+	return -strcmp(lhsurname, rhsurname); 
 }
 int8_t record_compare_computername(void* lhs, void* rhs) {
 	record* lhr = (record*) lhs;
 	record* rhr = (record*) rhs;
 	const char* lhcomputername = magic_get(lhs, lhr->o_computername);
 	const char* rhcomputername = magic_get(rhs, rhr->o_computername);
-	return strcmp(lhcomputername, rhcomputername); 
+	return -strcmp(lhcomputername, rhcomputername); 
 }
 int8_t record_compare_workspace(void* lhs, void* rhs) {
 	record* lhr = (record*) lhs;
 	record* rhr = (record*) rhs;
 	const char* lhworkspace = magic_get(lhs, lhr->o_workspace);
 	const char* rhworkspace = magic_get(rhs, rhr->o_workspace);
-	return strcmp(lhworkspace, rhworkspace); 
+	return -strcmp(lhworkspace, rhworkspace); 
 }

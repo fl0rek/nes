@@ -97,7 +97,7 @@ uint32_t m_close(o_marshall* m) {
 i_marshall* m_load(const char* filename) {
 	i_marshall* m = malloc(sizeof(*m));
 	struct stat fst;
-	if(!(m->fd = open(filename, O_RDONLY, (mode_t)0600))) { 
+	if(-1 == (m->fd = open(filename, O_RDONLY, (mode_t)0600))) { 
 		free(m);
 		return 0;
 	}

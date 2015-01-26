@@ -7,6 +7,6 @@ production:
 .PHONY: clean
 
 clean: 
-	rm notevensql
+	rm nes
 	@$(MAKE) -C src/ clean
 
