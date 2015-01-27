@@ -1,0 +1,63 @@
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{amssymb, dsfont}
+\usepackage[margin=1in]{geometry}
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\newcommand\codex[2][]{
+    \tikz[baseline=(s.base)]{
+        \node(s)[
+            rounded corners,
+            fill=blue!5,        % background color
+            draw=gray,          % border of box
+            text=gray!50!black, % text color
+            inner xsep =3pt,    % horizontal space between text and border
+            inner ysep =0pt,    % vertical space between text and border
+            text height=2ex,    % height of box
+            text depth =1ex,    % depth of box
+            #1                  % other options
+        ]{\texttt{#2}};
+    }
+}
+\usepackage{fancyhdr}
+ 
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Raport PRI}
+\lhead{Mikołaj Florkiewicz}
+\rfoot{\thepage}
+ 
+
+\title{Projekt PRI}
+\author{Mikołaj Florkiewicz}
+\date{2015-01-26}
+\begin{document}
+\maketitle
+
+\section{Interfejs użytkownika}
+Program zaimplementowany przy użyciu biblioteki ncurses, dzięki temu 
+interfejs jest przejżysty a obsługa go powinna być mozliwa
+na wiekszości dostępnych emulatorów terminala.
+
+\section{Implementacja wewnętrzna rekordów}
+Rekordy przechowywane są wewnątrz jako płaska struktura - jedyną jej dynamiczną 
+częscią jest pole char*, co jednocześnie pozwala przechowywać dowolnie długie 
+stringi w dowolnej ilości jak i upraszcza serializację do pliku. 
+Poza tym polem w strukturze są pola typu int w których przechowywany jesy ofset 
+interesującego nas pola w polu data. 
+\section{Serializacja}
+Serializacja do pliku jest niezależna od struktury rekordu - może on przechowywać
+dowolne dane, jedyne czego potrzebuje to jego wielość, jedynym niedogodnieniem 
+jest to, że po przywróceniu sam mechanizm serializacji nie ma możliwości 
+sensownego podzielenia danych na pojedyncze rekordy i musi być robione to ręcznie
+przez odbiorce danych.
+\section{Sortowanie}
+Rekordy po załadowaniu są indeksowane, co pozwala oszczedzić każdorazowego sortowania.
+Wskażniki na nie przechowywane są w odpowiednim drzewie AVL odpowiadającym 
+za sortownie po danym polu. Ze względu na jego właściwosci trawersowanie go, potrzebne
+aby zmienić pole po którym sortujemy, jest liniowe od liczby rekordów. Operacje 
+dodawnia, usuwania mają złożoność logarytmiczną.
+
+
+
+\end{document}

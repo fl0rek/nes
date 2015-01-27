@@ -36,6 +36,7 @@ ITEM** generate_menu(avltree* t, int cols) {
 		snprintf(line, linesize, "%*s%*s", 10+strlen(empty)/2, empty, 10-strlen(empty)/2, "");
 		item[0] = new_item(ord, line);
 		set_item_userptr(item[0], 0);
+		free(line);
 	} else for(i = 0; n; i++) {
 
 		record* r = get_data(n);
@@ -326,7 +327,7 @@ save:
 	}
 	unpost_form(edit_form);
 	free_form(edit_form);
-	for( i = 0; i < 5; i++ )
+	for( i = 0; i < 6; i++ )
 		free_field(field[i]);
 }
 
@@ -542,6 +543,7 @@ main(int argc, char** argv) {
 		printf("== %x\n", sorts[it]);
 		*/
 	}
+	free(item);
 
 }
 
